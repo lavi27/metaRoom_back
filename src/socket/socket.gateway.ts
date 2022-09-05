@@ -1,54 +1,6 @@
 import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
-// function publicRooms() {
-//   const {
-//     sockets: {
-//       adapter: { sids, rooms },
-//     },
-//   } = wss;
-  
-//   const publicRooms = [];
-
-//   let roomId;
-
-//   rooms.forEach((id, name) => {
-//     if (sids.get(name) === undefined) {
-//       roomId = [...id][0];
-      
-//       console.log(wss.sockets.adapter.rooms.get(roomId).size)
-
-//       let owner = wss.sockets.adapter
-//         .nsp.sockets
-//         .get(roomId)
-//         .nickname
-
-//       publicRooms.push({
-//         name,
-//         owner,
-//         userCount:1
-//       });
-//     }
-//   });
-
-//   // if (asdfasdf != undefined) {
-//   //   console.log(
-//   //     wss.sockets.adapter
-//   //     .nsp.sockets
-//   //     .get(asdfasdf)
-//   //     .nickname
-//   //     );
-//   // }
-
-//   // const clientSocket = io.sockets.sockets.get(clientId);
-
-//   return publicRooms;
-// }
-
-// function countRoom(roomName) {
-//   return wss.sockets.adapter.rooms.get(roomName)?.size;
-// }
-
 // function joinGame(socket) {
 //   let ball = new Ball(socket);
 //   balls.push(ball);
@@ -151,9 +103,43 @@ export class SocketGateway {
   @WebSocketServer()
   server: Server;
 
+  publicRooms() {
+    const {
+      sockets: {
+        adapter: { sids, rooms },
+      },
+    } = this.server;
+  
+    const publicRooms = [];
+  
+    rooms.forEach((id, name) => {
+      if (sids.get(name) === undefined) {
+        const roomId = [...id][0];
+        
+        let owner = this.server.sockets.adapter
+          .nsp.sockets
+          .get(roomId)
+          .nickname
+  
+        publicRooms.push({
+          name,
+          owner,
+          userCount:1
+        });
+      }
+    });
+
+    return publicRooms;
+  }
+
+  countRoom(roomName: string) {
+    return this.server.sockets.adapter.rooms.get(roomName)?.size;
+  }
+
   handleConnection() {
     console.log("Connect!")
-    this.server.emit('load_rooms', {asd : "asdfgasdghasdg"});
+
+    this.server.emit('load_rooms', this.publicRooms());
   }
 
   handleDisconnect() {
@@ -163,13 +149,13 @@ export class SocketGateway {
   @SubscribeMessage('load_rooms')
   async handleLoadRooms(@MessageBody() data:any): Promise<any> {
     console.log('asd')
-    this.server.emit('load_rooms', {asd : "asdfgasdghasdg"});
+    this.server.emit('load_rooms', this.publicRooms());
   }
 
 
   @SubscribeMessage('chat')
   async handleChat(@MessageBody() data:any): Promise<any> {
-    this.server.to(data.roomName).emit("chat", data.chat, data.nickName);
+    this.server.to(data.roomName).emit("chat", data.chat, data.nickName);  
   }
 
   @SubscribeMessage('change_nickname')
